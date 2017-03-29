@@ -705,7 +705,9 @@ cdef class MemObjectCollection:
         cdef long the_hash
         cdef size_t i, n_lookup
         cdef long mask
-        cdef _MemObject **table, **slot, **free_slot
+        cdef _MemObject **table
+        cdef _MemObject **slot
+        cdef _MemObject **free_slot
         cdef PyObject *py_addr
 
         py_addr = <PyObject *>address
@@ -859,7 +861,9 @@ cdef class MemObjectCollection:
         """
         cdef int new_size, remaining
         cdef size_t n_bytes
-        cdef _MemObject **old_table, **old_slot, **new_table
+        cdef _MemObject **old_table
+        cdef _MemObject **old_slot
+        cdef _MemObject **new_table
 
         new_size = 1024
         while new_size <= min_active and new_size > 0:
@@ -896,7 +900,8 @@ cdef class MemObjectCollection:
     def add(self, address, type_str, size, children=(), length=0,
             value=None, name=None, parent_list=(), total_size=0):
         """Add a new MemObject to this collection."""
-        cdef _MemObject **slot, *new_entry
+        cdef _MemObject **slot
+        cdef _MemObject *new_entry
         cdef _MemObjectProxy proxy
 
         slot = self._lookup(address)

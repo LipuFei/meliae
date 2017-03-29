@@ -64,7 +64,7 @@ The name is simply a fun word (means Ash-wood Nymph).
     try:
         from Cython.Distutils import build_ext
     except ImportError:
-        print "We require Cython to be installed."
+        print("We require Cython to be installed.")
         return
 
     kwargs["cmdclass"] = {"build_ext": build_ext}
