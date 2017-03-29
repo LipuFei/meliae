@@ -79,7 +79,7 @@ def dump_all_referenced(outf, obj, is_pending=False):
 def dump_gc_objects(outf, recurse_depth=1):
     """Dump everything that is available via gc.get_objects().
     """
-    if isinstance(outf, basestring):
+    if isinstance(outf, str):
         opened = True
         outf = open(outf, 'wb')
     else:
@@ -130,7 +130,7 @@ def dump_all_objects(outf):
     This also can be faster, because it doesn't dump the same item multiple
     times.
     """
-    if isinstance(outf, basestring):
+    if isinstance(outf, str):
         opened = True
         outf = open(outf, 'wb')
     else:

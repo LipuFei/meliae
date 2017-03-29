@@ -19,10 +19,6 @@
 
 #include "_scanner_core.h"
 
-#ifndef Py_TYPE
-#  define Py_TYPE(o) ((o)->ob_type)
-#endif
-
 // %zd is the gcc convention for defining that we are formatting a size_t
 // object, windows seems to prefer %ld, though perhaps we need to first check
 // sizeof(size_t) ?
@@ -98,7 +94,7 @@ _var_object_size(PyVarObject *c_obj)
         PyErr_Clear();
     }
     return _basic_object_size((PyObject *)c_obj)
-            + num_entries * c_obj->ob_type->tp_itemsize;
+            + num_entries * Py_TYPE(c_obj)->tp_itemsize;
 }
 
 static Py_ssize_t
@@ -106,7 +102,7 @@ _object_to_size_with_gc(PyObject *size_obj, PyObject *c_obj)
 {
     Py_ssize_t size = -1;
 
-    size = PyInt_AsSsize_t(size_obj);
+    size = PyLong_AsSsize_t(size_obj);
     if (size == -1) {
         // Probably an error occurred, we don't know for sure, but we might as
         // well just claim that we don't know the size. We *could* check
@@ -173,9 +169,10 @@ _size_of_dict(PyDictObject *c_obj)
 {
     Py_ssize_t size;
     size = _basic_object_size((PyObject *)c_obj);
-    if (c_obj->ma_table != c_obj->ma_smalltable) {
-        size += sizeof(PyDictEntry) * (c_obj->ma_mask + 1);
-    }
+    //if (c_obj->ma_table != c_obj->ma_smalltable) {
+    //    size += sizeof(PyDictEntry) * (c_obj->ma_mask + 1);
+    //}
+    size = PyDict_Size(c_obj);
     return size;
 }
 
@@ -185,7 +182,7 @@ _size_of_unicode(PyUnicodeObject *c_obj)
 {
     Py_ssize_t size;
     size = _basic_object_size((PyObject *)c_obj);
-    size += Py_UNICODE_SIZE * c_obj->length;
+    size += PyUnicode_GET_DATA_SIZE(c_obj);
     return size;
 }
 
@@ -249,8 +246,8 @@ _size_of(PyObject *c_obj)
     } else if PyUnicode_Check(c_obj) {
         return _size_of_unicode((PyUnicodeObject *)c_obj);
     } else if (PyTuple_CheckExact(c_obj)
-            || PyString_CheckExact(c_obj)
-            || PyInt_CheckExact(c_obj)
+            || PyBytes_CheckExact(c_obj)
+            || PyLong_CheckExact(c_obj)
             || PyBool_Check(c_obj)
             || c_obj == Py_None
             || PyModule_CheckExact(c_obj))
@@ -307,9 +304,9 @@ _dump_reference(PyObject *c_obj, void* val)
      */
     if (info->first) {
         info->first = 0;
-        n_bytes = snprintf(buf, 24, "%lu", (unsigned long)c_obj);
+        n_bytes = snprintf(buf, 24, "%llu", (uintptr_t)c_obj);
     } else {
-        n_bytes = snprintf(buf, 24, ", %lu", (unsigned long)c_obj);
+        n_bytes = snprintf(buf, 24, ", %llu", (uintptr_t)c_obj);
     }
     info->write(info->data, buf, n_bytes);
     return 0;
@@ -387,13 +384,13 @@ _dump_json_c_string(struct ref_info *info, const char *buf, Py_ssize_t len)
 }
 
 void
-_dump_string(struct ref_info *info, PyObject *c_obj)
+_dump_bytes(struct ref_info *info, PyObject *c_obj)
 {
     Py_ssize_t str_size;
-    char *str_buf;
+    const char *str_buf;
 
-    str_buf = PyString_AS_STRING(c_obj);
-    str_size = PyString_GET_SIZE(c_obj);
+    str_buf = PyBytes_AsString(c_obj);
+    str_size = PyBytes_Size(c_obj);
 
     _dump_json_c_string(info, str_buf, str_size);
 }
@@ -492,8 +489,8 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
     }
     _last_dumped = c_obj;
     size = _size_of(c_obj);
-    _write_to_ref_info(info, "{\"address\": %lu, \"type\": ",
-                       (unsigned long)c_obj);
+    _write_to_ref_info(info, "{\"address\": %llu, \"type\": ",
+                       (uintptr_t)c_obj);
     _dump_json_c_string(info, c_obj->ob_type->tp_name, -1);
     _write_to_ref_info(info, ", \"size\": " SSIZET_FMT, _size_of(c_obj));
     //  HANDLE __name__
@@ -502,19 +499,15 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
         _dump_json_c_string(info, PyModule_GetName(c_obj), -1);
     } else if (PyFunction_Check(c_obj)) {
         _write_static_to_info(info, ", \"name\": ");
-        _dump_string(info, ((PyFunctionObject *)c_obj)->func_name);
+        _dump_unicode(info, ((PyFunctionObject *)c_obj)->func_name);
     } else if (PyType_Check(c_obj)) {
         _write_static_to_info(info, ", \"name\": ");
         _dump_json_c_string(info, ((PyTypeObject *)c_obj)->tp_name, -1);
-    } else if (PyClass_Check(c_obj)) {
-        /* Old style class */
-        _write_static_to_info(info, ", \"name\": ");
-        _dump_string(info, ((PyClassObject *)c_obj)->cl_name);
     }
-    if (PyString_Check(c_obj)) {
-        _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyString_GET_SIZE(c_obj));
+    if (PyBytes_Check(c_obj)) {
+        _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyBytes_GET_SIZE(c_obj));
         _write_static_to_info(info, ", \"value\": ");
-        _dump_string(info, c_obj);
+        _dump_bytes(info, c_obj);
     } else if (PyUnicode_Check(c_obj)) {
         _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyUnicode_GET_SIZE(c_obj));
         _write_static_to_info(info, ", \"value\": ");
@@ -525,10 +518,10 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
         } else if (c_obj == Py_False) {
             _write_static_to_info(info, ", \"value\": \"False\"");
         } else {
-            _write_to_ref_info(info, ", \"value\": %ld", PyInt_AS_LONG(c_obj));
+            _write_to_ref_info(info, ", \"value\": %ld", PyLong_AS_LONG(c_obj));
         }
-    } else if (PyInt_CheckExact(c_obj)) {
-        _write_to_ref_info(info, ", \"value\": %ld", PyInt_AS_LONG(c_obj));
+    } else if (PyLong_CheckExact(c_obj)) {
+        _write_to_ref_info(info, ", \"value\": %ld", PyLong_AS_LONG(c_obj));
     } else if (PyTuple_Check(c_obj)) {
         _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyTuple_GET_SIZE(c_obj));
     } else if (PyList_Check(c_obj)) {
@@ -541,7 +534,7 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
     	PyCodeObject *co = ((PyFrameObject*)c_obj)->f_code;
         if (co) {
             _write_static_to_info(info, ", \"value\": ");
-            _dump_string(info, co->co_name);
+            _dump_unicode(info, co->co_name);
         }
     }
     _write_static_to_info(info, ", \"refs\": [");

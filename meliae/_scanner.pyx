@@ -16,19 +16,13 @@
 
 cdef extern from "stdio.h":
     ctypedef long size_t
-    ctypedef struct FILE:
-        pass
-    FILE *stderr
-    size_t fwrite(void *, size_t, size_t, FILE *)
-    size_t fprintf(FILE *, char *, ...)
-    void fflush(FILE *)
 
 cdef extern from "Python.h":
-    FILE *PyFile_AsFile(object)
+    int PyObject_IsInstance(object, object)
     int Py_UNICODE_SIZE
     ctypedef struct PyGC_Head:
         pass
-    object PyString_FromStringAndSize(char *, Py_ssize_t)
+    object PyBytes_FromStringAndSize(char *, Py_ssize_t)
 
 
 cdef extern from "_scanner_core.h":
@@ -43,6 +37,7 @@ cdef extern from "_scanner_core.h":
     object _get_referents(object c_obj)
     object _get_special_case_dict()
 
+import io
 
 _word_size = sizeof(Py_ssize_t)
 _gc_head_size = sizeof(PyGC_Head)
@@ -63,16 +58,14 @@ def size_of(obj):
 
 
 cdef void _file_io_callback(void *callee_data, char *bytes, size_t len):
-    cdef FILE *file_cb
-
-    file_cb = <FILE *>callee_data
-    fwrite(bytes, 1, len, file_cb)
+    file_obj = <object>callee_data
+    file_obj.write(PyBytes_FromStringAndSize(bytes, len))
+    file_obj.flush()
 
 
 cdef void _callable_callback(void *callee_data, char *bytes, size_t len):
     callable = <object>callee_data
-
-    s = PyString_FromStringAndSize(bytes, len)
+    s = PyBytes_FromStringAndSize(bytes, len)
     callable(s)
 
 
@@ -93,13 +86,12 @@ def dump_object_info(object out, object obj, object nodump=None,
        referenced (such as strings).
        2 dump everything we find and continue recursing
     """
-    cdef FILE *fp_out
-
-    fp_out = PyFile_AsFile(out)
-    if fp_out != NULL:
-        _dump_object_info(<write_callback>_file_io_callback, fp_out, obj,
+    #cdef int out_fd
+    #out_fd = PyObject_AsFileDescriptor(out)
+    #if out_fd >= 0:
+    if PyObject_IsInstance(out, io.IOBase):
+        _dump_object_info(<write_callback>_file_io_callback, <void *>out, obj,
                           nodump, recurse_depth)
-        fflush(fp_out)
     else:
         _dump_object_info(<write_callback>_callable_callback, <void *>out, obj,
                           nodump, recurse_depth)

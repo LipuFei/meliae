@@ -54,7 +54,7 @@ def open_file(filename):
             process = subprocess.Popen(['gzip', '-d', '-c', filename],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, close_fds=close_fds)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ENOENT:
                 # failing that, use another python process
                 return _open_mprocess(filename)
@@ -71,7 +71,7 @@ def open_file(filename):
                 # no longer running.
                 try:
                     return terminate()
-                except OSError, e:
+                except OSError as e:
                     sys.stderr.write('Ignoring failure to terminate process:'
                                      ' %s\n' % (e,))
                 # We *could* check if process.poll() returns that the
