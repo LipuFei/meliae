@@ -55,7 +55,7 @@ from meliae import warn
 
 
 ctypedef struct RefList:
-    long size
+    Py_ssize_t size
     PyObject *refs[0]
 
 
@@ -63,7 +63,7 @@ cdef Py_ssize_t sizeof_RefList(RefList *val):
     """Determine how many bytes for this ref list. val() can be NULL"""
     if val == NULL:
         return 0
-    return sizeof(long) + (sizeof(PyObject *) * val.size)
+    return sizeof(Py_ssize_t) + (sizeof(PyObject *) * val.size)
 
 
 cdef object _set_default(object d, object val):
@@ -101,9 +101,9 @@ cdef int _set_default_ptr(object d, PyObject **val) except -1:
         return 1
 
 
-cdef int _free_ref_list(RefList *ref_list) except -1:
+cdef Py_ssize_t _free_ref_list(RefList *ref_list) except -1:
     """Decref and free the list."""
-    cdef long i
+    cdef Py_ssize_t i
 
     if ref_list == NULL:
         return 0
@@ -121,7 +121,7 @@ cdef object _ref_list_to_list(RefList *ref_list):
     :param ref_list: A pointer to NULL, or to a list of longs. The list should
         start with the count of items
     """
-    cdef long i
+    cdef Py_ssize_t i
     # TODO: Always return a tuple, we already know the width, and this prevents
     #       double malloc(). However, this probably isn't a critical code path
 
@@ -135,7 +135,7 @@ cdef object _ref_list_to_list(RefList *ref_list):
 
 
 cdef RefList *_list_to_ref_list(object refs) except? NULL:
-    cdef long i, num_refs
+    cdef Py_ssize_t i, num_refs
     cdef RefList *ref_list
 
     num_refs = len(refs)
@@ -153,7 +153,7 @@ cdef RefList *_list_to_ref_list(object refs) except? NULL:
 
 
 cdef object _format_list(RefList *ref_list):
-    cdef long i, max_refs
+    cdef Py_ssize_t i, max_refs
 
     if ref_list == NULL:
         return ''
@@ -674,9 +674,9 @@ def _all_sort_key(proxy_obj):
 cdef class MemObjectCollection:
     """Track a bunch of _MemObject instances."""
 
-    cdef readonly int _table_mask  # N slots = table_mask + 1
-    cdef readonly int _active      # How many slots have real data
-    cdef readonly int _filled      # How many slots have real or dummy
+    cdef readonly Py_ssize_t _table_mask  # N slots = table_mask + 1
+    cdef readonly Py_ssize_t _active      # How many slots have real data
+    cdef readonly Py_ssize_t _filled      # How many slots have real or dummy
     cdef _MemObject** _table       # _MemObjects are stored inline
 
     def __init__(self):
@@ -688,9 +688,9 @@ cdef class MemObjectCollection:
         return self._active
 
     def __sizeof__(self):
-        cdef int i
+        cdef Py_ssize_t i
         cdef _MemObject *cur
-        cdef long my_size
+        cdef Py_ssize_t my_size
         my_size = (sizeof(MemObjectCollection)
             + (sizeof(_MemObject**) * (self._table_mask + 1))
             + (sizeof(_MemObject) * self._active))
@@ -702,9 +702,9 @@ cdef class MemObjectCollection:
         return my_size
 
     cdef _MemObject** _lookup(self, address) except NULL:
-        cdef long the_hash
-        cdef size_t i, n_lookup
-        cdef long mask
+        cdef Py_hash_t the_hash
+        cdef Py_ssize_t i, n_lookup
+        cdef Py_ssize_t mask
         cdef _MemObject **table
         cdef _MemObject **slot
         cdef _MemObject **free_slot
@@ -712,11 +712,11 @@ cdef class MemObjectCollection:
 
         py_addr = <PyObject *>address
         the_hash = PyObject_Hash(py_addr)
-        i = <size_t>the_hash
+        i = the_hash
         mask = self._table_mask
         table = self._table
         free_slot = NULL
-        for n_lookup from 0 <= n_lookup <= <size_t>mask: # Don't loop forever
+        for n_lookup from 0 <= n_lookup <= mask: # Don't loop forever
             slot = &table[i & mask]
             if slot[0] == NULL:
                 # Found a blank spot
@@ -740,7 +740,7 @@ cdef class MemObjectCollection:
         raise RuntimeError('we failed to find an open slot after %d lookups'
                            % (n_lookup))
 
-    cdef int _clear_slot(self, _MemObject **slot) except -1:
+    cdef Py_ssize_t _clear_slot(self, _MemObject **slot) except -1:
         _free_mem_object(slot[0])
         slot[0] = NULL
         return 1
@@ -825,21 +825,21 @@ cdef class MemObjectCollection:
     #    """moc[address] = value"""
     #    pass
 
-    cdef int _insert_clean(self, _MemObject *entry) except -1:
+    cdef Py_ssize_t _insert_clean(self, _MemObject *entry) except -1:
         """Copy _MemObject into the table.
 
         We know that this _MemObject is unique, and we know that self._table
         contains no _dummy entries. So we can do the lookup cheaply, without
         any equality checks, etc.
         """
-        cdef long the_hash
-        cdef size_t i, n_lookup, mask
+        cdef Py_hash_t the_hash
+        cdef Py_ssize_t i, n_lookup, mask
         cdef _MemObject **slot
 
         assert entry != NULL and entry.address != NULL
-        mask = <size_t>self._table_mask
-        the_hash = <size_t>PyObject_Hash(entry.address)
-        i = <size_t>the_hash
+        mask = self._table_mask
+        the_hash = PyObject_Hash(entry.address)
+        i = <Py_ssize_t>the_hash
         for n_lookup from 0 <= n_lookup < mask:
             slot = &self._table[i & mask]
             if slot[0] == NULL:
@@ -851,7 +851,7 @@ cdef class MemObjectCollection:
         raise RuntimeError('could not find a free slot after %d lookups'
                            % (n_lookup,))
 
-    cdef int _resize(self, int min_active) except -1:
+    cdef Py_ssize_t _resize(self, Py_ssize_t min_active) except -1:
         """Resize the internal table.
 
         We will be big enough to hold at least 'min_active' entries. We will
@@ -859,8 +859,8 @@ cdef class MemObjectCollection:
 
         :return: The new table size.
         """
-        cdef int new_size, remaining
-        cdef size_t n_bytes
+        cdef Py_ssize_t new_size, remaining
+        cdef Py_ssize_t n_bytes
         cdef _MemObject **old_table
         cdef _MemObject **old_slot
         cdef _MemObject **new_table
@@ -925,7 +925,7 @@ cdef class MemObjectCollection:
         return proxy
 
     def __dealloc__(self):
-        cdef long i
+        cdef Py_ssize_t i
 
         for i from 0 <= i < self._table_mask:
             self._clear_slot(self._table + i)
@@ -939,7 +939,7 @@ cdef class MemObjectCollection:
         return iter(self.keys())
 
     def keys(self):
-        cdef long i
+        cdef Py_ssize_t i
         cdef _MemObject *cur
         cdef _MemObjectProxy proxy
 
@@ -959,7 +959,7 @@ cdef class MemObjectCollection:
 
     def items(self):
         """Iterate over (key, value) tuples."""
-        cdef long i, out_idx
+        cdef Py_ssize_t i, out_idx
         cdef _MemObject *cur
         cdef _MemObjectProxy proxy
 
@@ -996,7 +996,7 @@ cdef class MemObjectCollection:
 
     def values(self):
         # This returns a list, but that is 'close enough' for what we need
-        cdef long i
+        cdef Py_ssize_t i
         cdef _MemObject *cur
         cdef _MemObjectProxy proxy
 
@@ -1015,8 +1015,8 @@ cdef class _MOCValueIterator:
     """A simple iterator over the values in a MOC."""
 
     cdef MemObjectCollection collection
-    cdef int initial_active
-    cdef int table_pos
+    cdef Py_ssize_t initial_active
+    cdef Py_ssize_t table_pos
 
     def __init__(self, collection):
         self.collection = collection
@@ -1054,7 +1054,7 @@ cdef class _MOPReferencedIterator:
     cdef MemObjectCollection collection
     cdef object seen_addresses
     cdef list pending_addresses
-    cdef int pending_offset
+    cdef Py_ssize_t pending_offset
 
     def __init__(self, proxy, excluding=None):
         cdef _MemObjectProxy c_proxy
@@ -1103,15 +1103,15 @@ cdef class _MOPReferencedIterator:
         raise StopIteration()
 
 
-cdef int RefList_traverse(RefList *self, visitproc visit, void *arg):
+cdef Py_ssize_t RefList_traverse(RefList *self, visitproc visit, void *arg):
     """Equivalent of tp_traverse for a RefList.
 
     RefList isn't a fully fledged python object/type, but since it can hold
     counted references to python objects, we want the containing objects to be
     able to tp_traverse to them.
     """
-    cdef int ret
-    cdef long i
+    cdef Py_ssize_t ret
+    cdef Py_ssize_t i
 
     ret = 0
     if self == NULL:
@@ -1123,14 +1123,14 @@ cdef int RefList_traverse(RefList *self, visitproc visit, void *arg):
     return ret
 
 
-cdef int _MemObject_traverse(_MemObject *self, visitproc visit, void *arg):
+cdef Py_ssize_t _MemObject_traverse(_MemObject *self, visitproc visit, void *arg):
     """Equivalent idea of tp_traverse for _MemObject.
 
     _MemObject isn't a fully fledged python object, but it can refer to python
     objects. So we create a traverse function for it, so that gc and Meliae
     itself can find the referenced objects.
     """
-    cdef int ret
+    cdef Py_ssize_t ret
 
     ret = 0
     if self == NULL:
@@ -1152,7 +1152,7 @@ cdef int _MemObject_traverse(_MemObject *self, visitproc visit, void *arg):
     return ret
 
 
-cdef int _MemObjectProxy_traverse(_MemObjectProxy self, visitproc visit,
+cdef Py_ssize_t _MemObjectProxy_traverse(_MemObjectProxy self, visitproc visit,
                                   void *arg) except -1:
     """Implement a correct tp_traverse because we use hidden members.
     
@@ -1164,7 +1164,7 @@ cdef int _MemObjectProxy_traverse(_MemObjectProxy self, visitproc visit,
     # reference to a _MemObject (if it was removed from a collection while the
     # proxy was still alive). And that _MemObject structure can hold onto
     # references to other real python objects.
-    cdef int ret
+    cdef Py_ssize_t ret
 
     ret = 0
     ret = visit(<PyObject *>self.collection, arg)
@@ -1175,7 +1175,7 @@ cdef int _MemObjectProxy_traverse(_MemObjectProxy self, visitproc visit,
 (<PyTypeObject*>_MemObjectProxy).tp_traverse = <traverseproc>_MemObjectProxy_traverse
 
 
-cdef int MemObjectCollection_traverse(MemObjectCollection self,
+cdef Py_ssize_t MemObjectCollection_traverse(MemObjectCollection self,
                                       visitproc visit, void *arg) except -1:
     """Implement a correct tp_traverse because we use hidden members.
     
@@ -1183,8 +1183,8 @@ cdef int MemObjectCollection_traverse(MemObjectCollection self,
     We use some private pointers to manage things, so we need a custom
     tp_traverse to let everyone know about it.
     """
-    cdef int ret
-    cdef int i
+    cdef Py_ssize_t ret
+    cdef Py_ssize_t i
     cdef _MemObject *cur
 
     ret = 0

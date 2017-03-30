@@ -146,8 +146,8 @@ cdef class IntSet:
             return True
         return False
 
-    cdef int _grow(self) except -1:
-        cdef int i
+    cdef Py_ssize_t _grow(self) except -1:
+        cdef Py_ssize_t i
         cdef Py_ssize_t old_mask, old_size, new_size, old_count
         cdef int_type *old_array
         cdef int_type val
@@ -185,7 +185,7 @@ cdef class IntSet:
                 % (old_size, new_size, old_count, self._count))
         free(old_array)
 
-    cdef int _add(self, int_type c_val) except -1:
+    cdef Py_ssize_t _add(self, int_type c_val) except -1:
         cdef int_type *entry
         if c_val == _singleton1:
             if self._has_singleton & 0x01:
