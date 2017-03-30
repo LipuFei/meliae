@@ -14,12 +14,8 @@
 
 """The core routines for scanning python references and dumping memory info."""
 
-cdef extern from "stdio.h":
-    ctypedef long size_t
-
 cdef extern from "Python.h":
     int PyObject_IsInstance(object, object)
-    int Py_UNICODE_SIZE
     ctypedef struct PyGC_Head:
         pass
     object PyBytes_FromStringAndSize(char *, Py_ssize_t)
@@ -29,7 +25,7 @@ cdef extern from "_scanner_core.h":
     Py_ssize_t _size_of(object c_obj)
     ctypedef char* const_pchar "const char*"
     ctypedef void (*write_callback)(void *callee_data, const_pchar bytes,
-                   size_t len)
+                   Py_ssize_t len)
 
     void _clear_last_dumped()
     void _dump_object_info(write_callback write, void *callee_data,
@@ -41,7 +37,6 @@ import io
 
 _word_size = sizeof(Py_ssize_t)
 _gc_head_size = sizeof(PyGC_Head)
-_unicode_size = Py_UNICODE_SIZE
 
 
 def size_of(obj):
@@ -57,13 +52,13 @@ def size_of(obj):
     return _size_of(obj)
 
 
-cdef void _file_io_callback(void *callee_data, char *bytes, size_t len):
+cdef void _file_io_callback(void *callee_data, char *bytes, Py_ssize_t len):
     file_obj = <object>callee_data
     file_obj.write(PyBytes_FromStringAndSize(bytes, len))
     file_obj.flush()
 
 
-cdef void _callable_callback(void *callee_data, char *bytes, size_t len):
+cdef void _callable_callback(void *callee_data, char *bytes, Py_ssize_t len):
     callable = <object>callee_data
     s = PyBytes_FromStringAndSize(bytes, len)
     callable(s)
@@ -86,9 +81,6 @@ def dump_object_info(object out, object obj, object nodump=None,
        referenced (such as strings).
        2 dump everything we find and continue recursing
     """
-    #cdef int out_fd
-    #out_fd = PyObject_AsFileDescriptor(out)
-    #if out_fd >= 0:
     if PyObject_IsInstance(out, io.IOBase):
         _dump_object_info(<write_callback>_file_io_callback, <void *>out, obj,
                           nodump, recurse_depth)

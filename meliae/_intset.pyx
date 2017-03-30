@@ -29,12 +29,12 @@ cdef extern from *:
 
 
 ctypedef Py_ssize_t int_type
-cdef int_type _singleton1, _singleton2
+cdef int _singleton1, _singleton2
 # _singleton1 is the 'no value present' value
 # _singleton2 is the 'value deleted' value, which has us keep searching
 # collisions after the fact
-_singleton1 = <int_type> 0;
-_singleton2 = <int_type> -1;
+_singleton1 = 0;
+_singleton2 = -1;
 
 
 cdef class IntSet:

@@ -172,7 +172,7 @@ _size_of_dict(PyDictObject *c_obj)
     //if (c_obj->ma_table != c_obj->ma_smalltable) {
     //    size += sizeof(PyDictEntry) * (c_obj->ma_mask + 1);
     //}
-    size = PyDict_Size(c_obj);
+    size += PyDict_Size((PyObject *)c_obj);
     return size;
 }
 

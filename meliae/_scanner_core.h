@@ -39,7 +39,7 @@ extern Py_ssize_t _size_of(PyObject *c_obj);
 /**
  * This callback will be used to dump more info to the user.
  */
-typedef void (*write_callback)(void *data, const char *bytes, size_t len);
+typedef void (*write_callback)(void *data, const char *bytes, Py_ssize_t len);
 
 /**
  * Write the information about this object to the file.
