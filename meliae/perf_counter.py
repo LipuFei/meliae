@@ -111,13 +111,13 @@ class _LinuxPerformanceCounter(PerformanceCounter):
         finally:
             f.close()
         m = re.search(r'(?i)vmpeak:\s*(?P<peak>\d+) kB', content)
-	peak = current = None
+        peak = current = None
         if m is not None:
-	   peak = int(m.group('peak')) * 1024
+            peak = int(m.group('peak')) * 1024
         m = re.search(r'(?i)vmsize:\s*(?P<current>\d+) kB', content)
         if m is not None:
-	   current = int(m.group('current')) * 1024
-	return current, peak
+           current = int(m.group('current')) * 1024
+        return current, peak
 
 
 class _Win32PerformanceCounter(PerformanceCounter):
