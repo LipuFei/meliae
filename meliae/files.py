@@ -26,7 +26,7 @@ import sys
 
 def open_file(filename):
     """Open a file which might be a regular file or a gzip.
-    
+
     :return: An iterator of lines, and a cleanup function.
     """
     source = open(filename, 'rb')
@@ -65,7 +65,7 @@ def open_file(filename):
         # terminate is a py2.6 thing
         if terminate is not None:
             def terminate_or_pass():
-                # It seems that on windows, sometimes terminate() can raise 
+                # It seems that on windows, sometimes terminate() can raise
                 # WindowsError: [Error 5] Access is denied
                 # My guess is that the process has actually completed, and is
                 # no longer running.

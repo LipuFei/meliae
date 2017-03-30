@@ -31,7 +31,7 @@ def warn(msg, klass=None, stacklevel=1):
 
 def trap_warnings(new_warning_func):
     """Redirect warnings to a different function.
-    
+
     :param new_warning_func: A function with the same signature as warning.warn
     :return: The old warning function
     """

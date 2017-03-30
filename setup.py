@@ -55,7 +55,7 @@ objects while trying to analyze python object memory consumption.
 It will likely grow to include a GUI for browsing the reference graph. For now
 it is mostly used in the python interpreter.
 
-The name is simply a fun word (means Ash-wood Nymph). 
+The name is simply a fun word (means Ash-wood Nymph).
 """
     }
 

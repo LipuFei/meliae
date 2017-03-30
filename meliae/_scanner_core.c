@@ -204,7 +204,7 @@ _size_of_from_specials(PyObject *c_obj)
     if (special_size_of == NULL) {
         // if special_size_of is NULL, an exception is *not* set
         return -1;
-    } 
+    }
     // special_size_of is a *borrowed referenced*
     val = PyObject_CallFunction(special_size_of, "O", c_obj);
     if (val == NULL) {
@@ -435,7 +435,7 @@ _dump_unicode(struct ref_info *info, PyObject *c_obj)
 }
 
 
-void 
+void
 _dump_object_info(write_callback write, void *callee_data,
                   PyObject *c_obj, PyObject *nodump, int recurse)
 {
@@ -462,7 +462,7 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
     int do_traverse;
     char *name;
 
-    if (info->nodump != NULL && 
+    if (info->nodump != NULL &&
         info->nodump != Py_None
         && PyAnySet_Check(info->nodump))
     {

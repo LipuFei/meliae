@@ -59,7 +59,6 @@ class _Counter(object):
         return math.sqrt(diff / (self.count-1))
 
 
-
 class PerformanceCounter(object):
     """Abstract some system information about performance counters.
 
@@ -74,7 +73,7 @@ class PerformanceCounter(object):
 
     def get_counter(self, name):
         """Create a Counter object that will track some aspect of processing.
-        
+
         :param name: An identifier associated with this action.
         :return: A Counter instance.
         """

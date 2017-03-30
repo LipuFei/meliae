@@ -59,7 +59,7 @@ extern PyObject *_get_referents(PyObject *c_obj);
 
 /**
  * Return a (mutable) dict of known special cases.
- * 
+ *
  * These are objects whose size is not reported properly, but which we have
  * figured out via trial-and-error.
  * The key is tp_name strings, the value is a PyInt of the appropriate size.

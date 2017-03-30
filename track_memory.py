@@ -17,6 +17,7 @@
 import subprocess
 import time
 
+
 def spawn_and_track(opts, args):
     from meliae import perf_counter
     timer = perf_counter.perf_counter.get_timer()

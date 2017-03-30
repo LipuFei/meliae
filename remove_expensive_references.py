@@ -50,10 +50,9 @@ def main(args):
     else:
         outfile = open(args[1], 'wb')
     for _, obj in loader.remove_expensive_references(source, show_progress=True):
-        outfile.write(obj.to_json() + '\n')   
+        outfile.write(obj.to_json() + '\n')
     outfile.flush()
 
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
-
