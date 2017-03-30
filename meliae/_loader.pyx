@@ -29,7 +29,7 @@ cdef extern from "Python.h":
         # richcmpfunc tp_richcompare
         traverseproc tp_traverse
 
-    long PyObject_Hash(PyObject *) except -1
+    Py_hash_t PyObject_Hash(PyObject *) except -1
 
     object PyList_New(Py_ssize_t)
     void PyList_SET_ITEM(object, Py_ssize_t, object)
@@ -178,7 +178,7 @@ cdef struct _MemObject:
     PyObject *address
     PyObject *type_str
     # Consider making this unsigned long
-    long size
+    Py_ssize_t size
     RefList *child_list
     # Removed for now, since it hasn't proven useful
     # int length
@@ -188,7 +188,7 @@ cdef struct _MemObject:
     #       a pointer
     # PyObject *name
     RefList *parent_list
-    unsigned long total_size
+    Py_ssize_t total_size
     # This is an uncounted ref to a _MemObjectProxy. _MemObjectProxy also has a
     # reference to this object, so when it disappears it can set the reference
     # to NULL.
@@ -405,7 +405,7 @@ cdef class _MemObjectProxy:
             return self.__len__()
 
     def _intern_from_cache(self, cache):
-        cdef long i
+        cdef Py_ssize_t i
         _set_default_ptr(cache, &self._obj.address)
         _set_default_ptr(cache, &self._obj.type_str)
         if self._obj.child_list != NULL:
@@ -643,7 +643,7 @@ cdef class _MemObjectProxy:
         """
         cdef _MOPReferencedIterator iterator
         cdef _MemObjectProxy item
-        cdef unsigned long total_size
+        cdef Py_ssize_t total_size
         total_size = 0
         iterator = self.iter_recursive_refs(excluding=excluding)
         for item in iterator:
