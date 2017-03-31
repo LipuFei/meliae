@@ -19,6 +19,11 @@ cdef extern from "Python.h":
     ctypedef struct PyGC_Head:
         pass
     object PyBytes_FromStringAndSize(char *, Py_ssize_t)
+    object PyUnicode_FromStringAndSize(char *, Py_ssize_t)
+    unsigned long Py_TPFLAGS_HEAPTYPE
+    unsigned long Py_TPFLAGS_HAVE_GC
+    int PyObject_HasAttr(object, object)
+    object PyObject_GetAttr(object, object)
 
 
 cdef extern from "_scanner_core.h":
