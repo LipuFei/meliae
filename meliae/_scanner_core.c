@@ -169,10 +169,35 @@ _size_of_dict(PyDictObject *c_obj)
 {
     Py_ssize_t size;
     size = _basic_object_size((PyObject *)c_obj);
+
+    //size += sizeof(PyObject *) * c_obj->ma_used;
+
+    size += sizeof(PyObject) * c_obj->ma_used;
+    //
+    // typedef struct {
+    //     /* Cached hash code of me_key. */
+    //     Py_hash_t me_hash;
+    //     PyObject *me_key;
+    //     PyObject *me_value; /* This field is only meaningful for combined tables */
+    // } PyDictKeyEntry;
+    //
+    // struct _dictkeysobject {
+    //     Py_ssize_t dk_refcnt;
+    //     Py_ssize_t dk_size;
+    //     dict_lookup_func dk_lookup;
+    //     Py_ssize_t dk_usable;
+    //     PyDictKeyEntry dk_entries[1];
+    // };
+    //
+
+    size += (sizeof(Py_ssize_t) + sizeof(Py_ssize_t)
+             + sizeof(PyObject *) // dict_lookup_func
+             + sizeof(Py_ssize_t)
+             + (sizeof(Py_hash_t) + sizeof(PyObject *) + sizeof(PyObject *)) // PyDictKeyEntry
+            ) * c_obj->ma_used;
     //if (c_obj->ma_table != c_obj->ma_smalltable) {
     //    size += sizeof(PyDictEntry) * (c_obj->ma_mask + 1);
     //}
-    size += PyDict_Size((PyObject *)c_obj);
     return size;
 }
 
@@ -505,7 +530,7 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
         }
     } else if (PyFunction_Check(c_obj)) {
         _write_static_to_info(info, ", \"name\": ");
-        _dump_unicode(info, ((PyFunctionObject *)c_obj)->func_name);
+        _dump_json_c_string(info, PyUnicode_AS_DATA(((PyFunctionObject *)c_obj)->func_name), -1);
     } else if (PyType_Check(c_obj)) {
         _write_static_to_info(info, ", \"name\": ");
         _dump_json_c_string(info, ((PyTypeObject *)c_obj)->tp_name, -1);
@@ -524,7 +549,7 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
         } else if (c_obj == Py_False) {
             _write_static_to_info(info, ", \"value\": \"False\"");
         } else {
-            _write_to_ref_info(info, ", \"value\": %ld", PyLong_AS_LONG(c_obj));
+            _write_to_ref_info(info, ", \"value\": %lld", PyLong_AS_LONG(c_obj));
         }
     } else if (PyLong_CheckExact(c_obj)) {
         _write_to_ref_info(info, ", \"value\": %ld", PyLong_AS_LONG(c_obj));
