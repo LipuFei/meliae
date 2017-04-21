@@ -96,8 +96,14 @@ _var_object_size(PyVarObject *c_obj)
     Py_ssize_t num_entries;
     num_entries = Py_SIZE(c_obj);
     if (num_entries < 0) {
-        /* This object doesn't support len() */
-        num_entries = 0;
+        // https://docs.python.org/3.5/c-api/typeobj.html
+        // ints use a negative ob_size to indicate a negative number, and N is abs(ob_size) there.
+        if (PyLong_CheckExact(c_obj)) {
+            num_entries = -num_entries;
+        } else {
+            /* This object doesn't support len() */
+            num_entries = 0;
+        }
         PyErr_Clear();
     }
     return _basic_object_size((PyObject *)c_obj)
