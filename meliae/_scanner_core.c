@@ -87,7 +87,7 @@ static Py_ssize_t
 _var_object_size(PyVarObject *c_obj)
 {
     Py_ssize_t num_entries;
-    num_entries = PyObject_Size((PyObject *)c_obj);
+    num_entries = Py_SIZE(c_obj);
     if (num_entries < 0) {
         /* This object doesn't support len() */
         num_entries = 0;
