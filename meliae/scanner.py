@@ -42,7 +42,7 @@ add_special_size("numpy.ndarray", _size_of_ndarray, _size_of_ndarray)
 def dump_all_referenced(outf, obj, is_pending=False):
     """Recursively dump everything that is referenced from obj."""
     if isinstance(outf, str):
-        outf = open(outf, 'wb')
+        outf = open(outf, 'wb', buffering=0)
     if is_pending:
         pending = obj
     else:
@@ -81,7 +81,7 @@ def dump_gc_objects(outf, recurse_depth=1):
     """
     if isinstance(outf, str):
         opened = True
-        outf = open(outf, 'wb')
+        outf = open(outf, 'wb', buffering=0)
     else:
         opened = False
     # Get the list of everything before we start building new objects
@@ -132,7 +132,7 @@ def dump_all_objects(outf):
     """
     if isinstance(outf, str):
         opened = True
-        outf = open(outf, 'wb')
+        outf = open(outf, 'wb', buffering=0)
     else:
         opened = False
     all_objs = gc.get_objects()
