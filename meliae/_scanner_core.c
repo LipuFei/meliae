@@ -41,6 +41,13 @@
 #   define inline
 #endif
 
+#if !defined(TRUE)
+#   define TRUE  1
+#endif
+#if !defined(FALSE)
+#   define FALSE 0
+#endif
+
 struct ref_info {
     write_callback write;
     void *data;
@@ -373,7 +380,7 @@ _dump_if_no_traverse(PyObject *c_obj, void *val)
 
 
 static inline void
-_dump_json_c_string(struct ref_info *info, const char *buf, Py_ssize_t len)
+_dump_json_c_string(struct ref_info *info, const char *buf, Py_ssize_t len, int is_string)
 {
     Py_ssize_t i;
     char c, *ptr, *end;
@@ -391,7 +398,10 @@ _dump_json_c_string(struct ref_info *info, const char *buf, Py_ssize_t len)
     *ptr++ = '"';
     for (i = 0; i < len; ++i) {
         c = buf[i];
-        if (c <= 0x1f || c > 0x7e) { // use the unicode escape sequence
+        if (!is_string) { // use hex for bytes
+            ptr += snprintf(ptr, end-ptr, "\\x%02x",
+                            ((unsigned short)c & 0xFF));
+        } else if (c <= 0x1f || c > 0x7e) { // use the unicode escape sequence
             ptr += snprintf(ptr, end-ptr, "\\u00%02x",
                             ((unsigned short)c & 0xFF));
         } else if (c == '\\' || c == '/' || c == '"') {
@@ -417,7 +427,7 @@ _dump_bytes(struct ref_info *info, PyObject *c_obj)
     str_buf = PyBytes_AsString(c_obj);
     str_size = PyBytes_Size(c_obj);
 
-    _dump_json_c_string(info, str_buf, str_size);
+    _dump_json_c_string(info, str_buf, str_size, FALSE);
 }
 
 
@@ -517,7 +527,7 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
     size = _size_of(c_obj);
     _write_to_ref_info(info, "{\"address\": %llu, \"type\": ",
                        (uintptr_t)c_obj);
-    _dump_json_c_string(info, c_obj->ob_type->tp_name, -1);
+    _dump_json_c_string(info, c_obj->ob_type->tp_name, -1, TRUE);
     _write_to_ref_info(info, ", \"size\": " SSIZET_FMT, _size_of(c_obj));
     //  HANDLE __name__
     if (PyModule_Check(c_obj)) {
@@ -526,14 +536,14 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
             PyErr_Clear();
         } else {
             _write_static_to_info(info, ", \"name\": ");
-            _dump_json_c_string(info, name, -1);
+            _dump_json_c_string(info, name, -1, TRUE);
         }
     } else if (PyFunction_Check(c_obj)) {
         _write_static_to_info(info, ", \"name\": ");
-        _dump_json_c_string(info, PyUnicode_AS_DATA(((PyFunctionObject *)c_obj)->func_name), -1);
+        _dump_json_c_string(info, PyUnicode_AS_DATA(((PyFunctionObject *)c_obj)->func_name), -1, TRUE);
     } else if (PyType_Check(c_obj)) {
         _write_static_to_info(info, ", \"name\": ");
-        _dump_json_c_string(info, ((PyTypeObject *)c_obj)->tp_name, -1);
+        _dump_json_c_string(info, ((PyTypeObject *)c_obj)->tp_name, -1, TRUE);
     }
     if (PyBytes_Check(c_obj)) {
         _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyBytes_GET_SIZE(c_obj));
