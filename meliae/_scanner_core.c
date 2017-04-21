@@ -262,13 +262,13 @@ _size_of(PyObject *c_obj)
 {
     Py_ssize_t size;
 
-    if PyList_Check(c_obj) {
+    if (PyList_Check(c_obj)) {
         return _size_of_list((PyListObject *)c_obj);
-    } else if PyAnySet_Check(c_obj) {
+    } else if (PyAnySet_Check(c_obj)) {
         return _size_of_set((PySetObject *)c_obj);
-    } else if PyDict_Check(c_obj) {
+    } else if (PyDict_Check(c_obj)) {
         return _size_of_dict((PyDictObject *)c_obj);
-    } else if PyUnicode_Check(c_obj) {
+    } else if (PyUnicode_Check(c_obj)) {
         return _size_of_unicode((PyUnicodeObject *)c_obj);
     } else if (PyTuple_CheckExact(c_obj)
             || PyBytes_CheckExact(c_obj)
