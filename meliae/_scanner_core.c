@@ -430,6 +430,17 @@ _dump_bytes(struct ref_info *info, PyObject *c_obj)
     _dump_json_c_string(info, str_buf, str_size, FALSE);
 }
 
+void
+_dump_bytearray(struct ref_info *info, PyObject *c_obj)
+{
+    Py_ssize_t str_size;
+    const char *str_buf;
+
+    str_buf = PyByteArray_AsString(c_obj);
+    str_size = PyByteArray_Size(c_obj);
+
+    _dump_json_c_string(info, str_buf, str_size, FALSE);
+}
 
 void
 _dump_unicode(struct ref_info *info, PyObject *c_obj)
@@ -549,6 +560,10 @@ _dump_object_to_ref_info(struct ref_info *info, PyObject *c_obj, int recurse)
         _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyBytes_GET_SIZE(c_obj));
         _write_static_to_info(info, ", \"value\": ");
         _dump_bytes(info, c_obj);
+    } else if (PyByteArray_CheckExact(c_obj)) {
+        _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyByteArray_GET_SIZE(c_obj));
+        _write_static_to_info(info, ", \"value\": ");
+        _dump_bytearray(info, c_obj);
     } else if (PyUnicode_Check(c_obj)) {
         _write_to_ref_info(info, ", \"len\": " SSIZET_FMT, PyUnicode_GET_SIZE(c_obj));
         _write_static_to_info(info, ", \"value\": ");
